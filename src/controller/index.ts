@@ -1,6 +1,6 @@
 import { Dal } from "../dal/interfaces";
 import { MusicService } from "../music-service-management/interfaces";
-import { SongWithTags } from "../interfaces";
+import { TrackWithTags } from "../interfaces";
 
 export class Controller {
 
@@ -11,8 +11,8 @@ export class Controller {
     public syncSongs(): void {
 
     }
-    
-    public getSongs(): SongWithTags {
+
+    public getSongs(): TrackWithTags {
         return null;
     }
 
@@ -25,6 +25,6 @@ export class Controller {
     }
 
     public createPlaylistByTags(playlistName: string, tags: string[]): void {
-        
+
     }
 }
