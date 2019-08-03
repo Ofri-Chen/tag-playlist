@@ -1,5 +1,8 @@
+export type MusicServiceName = 'spotify' | 'youtube';
+
 export interface Track {
     id: string;
+    type: MusicServiceName,
     displayName: string;
     artists: string[];
     album: string;
@@ -13,7 +16,7 @@ export interface User {
     id: string;
     displayName: string;
     musicServices: {
-        spotify?: SpotifyConfiguration;
+        spotify?: SpotifyUserConfiguration;
     }
 }
 
@@ -28,14 +31,16 @@ export interface Configuration {
         end: string;
     },
     musicServices: {
-        spotify: {
-            chunkOptions: any;
-            serverPort: number;
-        };
+        spotify: BasicSpotifyConfiguration;
     }
 }
 
-export interface SpotifyConfiguration {
+export interface BasicSpotifyConfiguration {
+    chunkOptions: any;
+    serverPort: number;
+}
+
+export interface SpotifyUserConfiguration {
     generateAccessTokenUri: string;
     serverUri: string;
     clientId: string;

@@ -1,15 +1,19 @@
 import { MusicService } from "../../interfaces";
-import { Track, SpotifyConfiguration, User, ICacheService } from "../../../interfaces";
+import { Track, SpotifyUserConfiguration, BasicSpotifyConfiguration, User, ICacheService } from "../../../interfaces";
 import * as config from '../../../../config'
 import { resolveAllStringParametersInObject } from "../../../common/utils";
 import SpotifyWebApi from 'spotify-web-api-node';
 import _ from 'lodash';
 import { ExtendedError } from "../../../common/error";
+import { Dal } from "../../../dal/interfaces";
+import { runAsAsyncChunks } from '../../../../external-libs/async-chunker/index.js';
 
-const baseSpotifyConfig: SpotifyConfiguration = resolveAllStringParametersInObject(config.musicServices.spotify);
+const baseSpotifyConfig: BasicSpotifyConfiguration = resolveAllStringParametersInObject(config.musicServices.spotify);
+const type = 'spotify';
 
 export class SpotifyMusicService implements MusicService {
-    constructor(private cacheService: ICacheService<string, SpotifyWebApi>) {
+    constructor(private cacheService: ICacheService<string, SpotifyWebApi>,
+        private dal: Dal) {
     }
 
     public async getAllSongs(user: User): Promise<Track[]> {
@@ -25,17 +29,31 @@ export class SpotifyMusicService implements MusicService {
 
         return tracksResponse.body.items.map(trackRes => ({
             id: trackRes.track.id,
+            type,
             displayName: trackRes.track.name,
             artists: trackRes.track.artists.map(artist => artist.name),
             album: trackRes.track.album.name
         }))
     }
 
-    async createPlaylistByTags(user: User, playlistName: string, tags: string[]): Promise<void> {
-        throw new Error("Method not implemented.");
+    async createPlaylistByTags(user: User, playlistName: string, tags: string[]): Promise<string> {
+        const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
+        const response = await spotifyApi.createPlaylist(user.musicServices.spotify.clientId, playlistName);
+        const playlistId = response.body.id;
+        await this.updatePlaylistWithTags(user, playlistId, tags);
+
+        return playlistId;
     }
     async updatePlaylistWithTags(user: User, playlistId: string, tags: string[]): Promise<void> {
-        throw new Error("Method not implemented.");
+        const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
+
+        const trackIdsByTags: string[] = (await this.dal.getTracksByTags(user, type, tags)).map(track => track.id);
+        const playlistTrackIds: string[] = (await this.getPlaylistTracks(user, playlistId)).map(track => track.id);
+        const trackIdsToAdd: string[] = _.difference(trackIdsByTags, playlistTrackIds);
+
+        return runAsAsyncChunks(trackIdsToAdd,
+            (trackIdsChunk: string[]) => spotifyApi.addTracksToPlaylist(playlistId, trackIdsChunk),
+            baseSpotifyConfig.chunkOptions);
     }
 
     private getSpotifyApi(user: User): SpotifyWebApi {
@@ -48,21 +66,21 @@ export class SpotifyMusicService implements MusicService {
             throw new ExtendedError(`user doesn't have spotify configuration`, { user });
         }
 
-        const spotifyConfig: SpotifyConfiguration = resolveAllStringParametersInObject(user.musicServices.spotify);
+        const spotifyConfig: SpotifyUserConfiguration = resolveAllStringParametersInObject(user.musicServices.spotify);
         const spotifyApi = this.buildSpotifyApiObj(spotifyConfig);
         this.cacheService.setItem(spotifyConfig.clientId, spotifyApi);
 
         return spotifyApi;
     }
 
-    private buildSpotifyApiObj(spotifyConfig: SpotifyConfiguration): SpotifyWebApi {
-        this.spotifyApi = new SpotifyWebApi({
+    private buildSpotifyApiObj(spotifyConfig: SpotifyUserConfiguration): SpotifyWebApi {
+        const spotifyApi = new SpotifyWebApi({
             clientId: spotifyConfig.clientId,
             clientSecret: spotifyConfig.clientSecret,
             redirectUri: spotifyConfig.serverUri,
         });
-        this.spotifyApi.setAccessToken(spotifyConfig.accessToken);
+        spotifyApi.setAccessToken(spotifyConfig.accessToken);
 
-        return this.spotifyApi;
+        return spotifyApi;
     }
 }
