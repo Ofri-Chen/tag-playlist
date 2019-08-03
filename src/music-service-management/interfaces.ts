@@ -1,9 +1,11 @@
-import { Track, User } from "../interfaces";
+import { Track, User, MusicServiceTypes } from "../interfaces";
 
 export interface MusicService {
+    type: MusicServiceTypes;
+
     getAllSongs(user: User): Promise<Track[]>;
     getPlaylistTracks(user: User, playlistId: string): Promise<Track[]>; 
 
-    createPlaylistByTags(user: User, playlistName: string, tags: string[]): Promise<string>;
-    updatePlaylistWithTags(user: User, playlistId: string, tags: string[]): Promise<void>;
+    createPlaylist(user: User, playlistName: string): Promise<string>;
+    updatePlaylistTracks(user: User, playlistId: string, trackIds: string[]): Promise<void>;
 }

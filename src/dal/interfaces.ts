@@ -1,5 +1,5 @@
-import { User, TrackWithTags, MusicServiceName } from "../interfaces";
+import { User, TrackWithTags, MusicServiceTypes } from "../interfaces";
 
 export interface Dal {
-    getTracksByTags(user: User, type: MusicServiceName, tags: string[]): Promise<TrackWithTags[]>;
+    getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<TrackWithTags[]>;
 }

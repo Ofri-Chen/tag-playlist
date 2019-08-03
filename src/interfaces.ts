@@ -1,8 +1,8 @@
-export type MusicServiceName = 'spotify' | 'youtube';
+export type MusicServiceTypes = 'spotify' | 'youtube';
 
 export interface Track {
     id: string;
-    type: MusicServiceName,
+    type: MusicServiceTypes,
     displayName: string;
     artists: string[];
     album: string;
