@@ -5,7 +5,6 @@ import { resolveAllStringParametersInObject } from "../../../common/utils";
 import SpotifyWebApi from 'spotify-web-api-node';
 import _ from 'lodash';
 import { ExtendedError } from "../../../common/error";
-import { Dal } from "../../../dal/interfaces";
 import { runAsAsyncChunks } from '../../../../external-libs/async-chunker/index.js';
 
 const spotifyConfig: SpotifyConfiguration = resolveAllStringParametersInObject(config.musicServices.spotify);
@@ -21,7 +20,10 @@ export class SpotifyMusicService implements MusicService {
         const playlistsResponse = await spotifyApi.getUserPlaylists();
 
         const playlists = await Promise.all(playlistsResponse.body.items.map(playlistRes => this.getPlaylistTracks(user, playlistRes.id)));
-        return _.flatten(playlists);
+        return _(playlists)
+            .flatten()
+            .uniqBy('id')
+            .value();
     }
     public async getPlaylistTracks(user: User, playlistId: string): Promise<Track[]> {
         const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
