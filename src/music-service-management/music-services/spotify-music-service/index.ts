@@ -1,5 +1,5 @@
 import { MusicService } from "../../interfaces";
-import { Track, SpotifyUserConfiguration, BasicSpotifyConfiguration, User, ICacheService, MusicServiceTypes } from "../../../interfaces";
+import { Track, SpotifyUserConfiguration, SpotifyConfiguration, User, ICacheService, MusicServiceTypes } from "../../../interfaces";
 import * as config from '../../../../config'
 import { resolveAllStringParametersInObject } from "../../../common/utils";
 import SpotifyWebApi from 'spotify-web-api-node';
@@ -8,7 +8,7 @@ import { ExtendedError } from "../../../common/error";
 import { Dal } from "../../../dal/interfaces";
 import { runAsAsyncChunks } from '../../../../external-libs/async-chunker/index.js';
 
-const baseSpotifyConfig: BasicSpotifyConfiguration = resolveAllStringParametersInObject(config.musicServices.spotify);
+const spotifyConfig: SpotifyConfiguration = resolveAllStringParametersInObject(config.musicServices.spotify);
 
 export class SpotifyMusicService implements MusicService {
     public type: MusicServiceTypes = 'spotify';
@@ -48,7 +48,7 @@ export class SpotifyMusicService implements MusicService {
 
         return runAsAsyncChunks(trackIds,
             (trackIdsChunk: string[]) => spotifyApi.addTracksToPlaylist(playlistId, trackIdsChunk),
-            baseSpotifyConfig.chunkOptions);
+            spotifyConfig.chunkOptions);
     }
 
     private getSpotifyApi(user: User): SpotifyWebApi {
@@ -61,20 +61,20 @@ export class SpotifyMusicService implements MusicService {
             throw new ExtendedError(`user doesn't have spotify configuration`, { user });
         }
 
-        const spotifyConfig: SpotifyUserConfiguration = resolveAllStringParametersInObject(user.musicServices.spotify);
-        const spotifyApi = this.buildSpotifyApiObj(spotifyConfig);
-        this.cacheService.setItem(spotifyConfig.clientId, spotifyApi);
+        const spotifyUserConfig: SpotifyUserConfiguration = resolveAllStringParametersInObject(user.musicServices.spotify);
+        const spotifyApi = this.buildSpotifyApiObj(spotifyUserConfig);
+        this.cacheService.setItem(spotifyUserConfig.clientId, spotifyApi, spotifyConfig.accessTokenExpiration);
 
         return spotifyApi;
     }
 
-    private buildSpotifyApiObj(spotifyConfig: SpotifyUserConfiguration): SpotifyWebApi {
+    private buildSpotifyApiObj(spotifyUserConfig: SpotifyUserConfiguration): SpotifyWebApi {
         const spotifyApi = new SpotifyWebApi({
-            clientId: spotifyConfig.clientId,
-            clientSecret: spotifyConfig.clientSecret,
-            redirectUri: spotifyConfig.serverUri,
+            clientId: spotifyUserConfig.clientId,
+            clientSecret: spotifyUserConfig.clientSecret,
+            redirectUri: spotifyUserConfig.serverUri,
         });
-        spotifyApi.setAccessToken(spotifyConfig.accessToken);
+        spotifyApi.setAccessToken(spotifyUserConfig.accessToken);
 
         return spotifyApi;
     }

@@ -32,11 +32,12 @@ export interface Configuration {
         end: string;
     },
     musicServices: {
-        spotify: BasicSpotifyConfiguration;
+        spotify: SpotifyConfiguration;
     }
 }
 
-export interface BasicSpotifyConfiguration {
+export interface SpotifyConfiguration {
+    accessTokenExpiration: number;
     chunkOptions: any;
     serverPort: number;
 }

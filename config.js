@@ -5,6 +5,7 @@ module.exports = {
     },
     musicServices: {
         spotify: {
+            accessTokenExpiration: 1000 * 60 * 59, //59 minutes
             serverPort: 12345,
             chunkOptions: {
                 chunkSize: 50,
