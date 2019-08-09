@@ -21,7 +21,8 @@ export interface User {
 }
 
 export interface ICacheService<TKey, TValue> {
-    setItem(key: TKey, value: TValue): void;
+    setItem(key: TKey, value: TValue, expiration?: number): void;
+    removeItem(key: TKey): void;
     getItem(key: TKey): TValue;
 }
 
