@@ -53,8 +53,26 @@ export class Controller {
         }
     }
 
-    public async removeTagsFromTracks(user: User, songIds: string[], tags: string[]): Promise<void> {
+    public async removeTagsFromTracks(user: User, tracksIds: string[], tags: string[]): Promise<void> {
+        const tracks: TrackWithTags[] = await this.dal.getTracksByIds(user, this.musicService.type, tracksIds);
+        const tracksByIds = _.keyBy(tracks, 'id');
 
+        const tracksToUpdate = tracksIds.reduce((result, trackId) => {
+            const track = tracksByIds[trackId];
+            const reducedTags = _.difference(track.tags, tags);
+            if (reducedTags.length < track.tags.length) {
+                result.push({
+                    ...track,
+                    tags: reducedTags
+                });
+            }
+
+            return result;
+        }, []);
+
+        if (tracksToUpdate.length > 0) {
+            return this.dal.upsertTracks(user, this.musicService.type, tracksToUpdate);
+        }
     }
 
     public async createPlaylistByTags(user: User, playlistName: string, tags: string[]): Promise<string> {
