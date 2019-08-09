@@ -4,9 +4,7 @@ import { TrackWithTags, User, Track, PlaylistMetadata } from "../interfaces";
 import _ from "lodash";
 
 export class Controller {
-
     constructor(private musicService: MusicService, private dal: Dal) {
-
     }
 
     public async syncTracks(user: User) {
@@ -131,7 +129,5 @@ export class Controller {
             });
             return result;
         }, []);
-
-
     }
 }
