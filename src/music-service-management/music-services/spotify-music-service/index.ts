@@ -13,8 +13,7 @@ const baseSpotifyConfig: BasicSpotifyConfiguration = resolveAllStringParametersI
 export class SpotifyMusicService implements MusicService {
     public type: MusicServiceTypes = 'spotify';
 
-    constructor(private cacheService: ICacheService<string, SpotifyWebApi>,
-        private dal: Dal) {
+    constructor(private cacheService: ICacheService<string, SpotifyWebApi>) {
     }
 
     public async getAllSongs(user: User): Promise<Track[]> {
