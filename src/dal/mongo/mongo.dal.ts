@@ -29,7 +29,12 @@ export class MongoDal implements Dal {
             }).toArray();
     }
     getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<TrackWithTags[]> {
-        throw new Error("Method not implemented.");
+        return this._tracksCollection.find(
+            {
+                userId: user.id,
+                type,
+                tags: { $in: tags }
+            }).toArray();
     }
     getUserTracks(user: User, type: MusicServiceTypes): Promise<TrackWithTags[]> {
         throw new Error("Method not implemented.");
