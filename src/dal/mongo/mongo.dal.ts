@@ -26,7 +26,8 @@ export class MongoDal implements Dal {
                 userId: user.id,
                 type,
                 id: { $in: ids }
-            }).toArray();
+            }
+        ).toArray();
     }
     getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<TrackWithTags[]> {
         return this._tracksCollection.find(
@@ -34,10 +35,16 @@ export class MongoDal implements Dal {
                 userId: user.id,
                 type,
                 tags: { $in: tags }
-            }).toArray();
+            }
+        ).toArray();
     }
     getUserTracks(user: User, type: MusicServiceTypes): Promise<TrackWithTags[]> {
-        throw new Error("Method not implemented.");
+        return this._tracksCollection.find(
+            {
+                userId: user.id,
+                type
+            }
+        ).toArray();
     }
 
     private connectToDb() {
