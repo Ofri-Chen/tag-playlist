@@ -51,6 +51,7 @@ export interface Configuration {
 export interface MongoConfig {
     uri: string;
     dbName: string;
+    collection: string;
 }
 
 export interface SpotifyConfiguration {
