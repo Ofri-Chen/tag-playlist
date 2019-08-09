@@ -1,5 +1,5 @@
 import { MusicService } from "../../interfaces";
-import { Track, SpotifyUserConfiguration, SpotifyConfiguration, User, ICacheService, MusicServiceTypes } from "../../../interfaces";
+import { Track, SpotifyUserConfiguration, SpotifyConfiguration, User, ICacheService, MusicServiceTypes, PlaylistMetadata } from "../../../interfaces";
 import * as config from '../../../../config'
 import { resolveAllStringParametersInObject } from "../../../common/utils";
 import SpotifyWebApi from 'spotify-web-api-node';
@@ -16,15 +16,25 @@ export class SpotifyMusicService implements MusicService {
     }
 
     public async getAllSongs(user: User): Promise<Track[]> {
-        const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
-        const playlistsResponse = await spotifyApi.getUserPlaylists();
+        const playlists: PlaylistMetadata[] = await this.getPlaylistsMetadata(user);
 
-        const playlistsTracks = await Promise.all(playlistsResponse.body.items.map(playlistRes => this.getPlaylistTracks(user, playlistRes.id)));
+        const playlistsTracks = await Promise.all(playlists.map(playlist => this.getPlaylistTracks(user, playlist.id)));
         return _(playlistsTracks)
             .flatten()
             .uniqBy('id')
             .value();
     }
+
+    public async getPlaylistsMetadata(user: User): Promise<PlaylistMetadata[]> {
+        const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
+        const playlistsResponse = await spotifyApi.getUserPlaylists();
+
+        return playlistsResponse.body.items.map(playlist => ({
+            id: playlist.id,
+            displayName: playlist.name
+        }));
+    }
+
     public async getPlaylistTracks(user: User, playlistId: string): Promise<Track[]> {
         const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
         const tracksResponse = await spotifyApi.getPlaylistTracks(playlistId);
@@ -46,7 +56,7 @@ export class SpotifyMusicService implements MusicService {
     }
 
     async updatePlaylistTracks(user: User, playlistId: string, trackIds: string[]): Promise<void> {
-        const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);        
+        const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
 
         return runAsAsyncChunks(trackIds,
             (trackIdsChunk: string[]) => spotifyApi.addTracksToPlaylist(playlistId, trackIdsChunk),
