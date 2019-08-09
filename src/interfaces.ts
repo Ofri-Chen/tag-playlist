@@ -31,14 +31,26 @@ export interface ICacheService<TKey, TValue> {
     getItem(key: TKey): TValue;
 }
 
+export interface ILogger {
+    info(message: string, meta?: any);
+    warn(message: string, meta?: any);
+    error(message: string, meta?: any);
+}
+
 export interface Configuration {
     stringParameters: {
         start: string;
         end: string;
     },
-    musicServices: {
-        spotify: SpotifyConfiguration;
-    }
+    musicServices?: {
+        spotify?: SpotifyConfiguration;
+    },
+    mongo?: MongoConfig;
+}
+
+export interface MongoConfig {
+    uri: string;
+    dbName: string;
 }
 
 export interface SpotifyConfiguration {
