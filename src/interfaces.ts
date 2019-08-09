@@ -12,6 +12,11 @@ export interface TrackWithTags extends Track {
     tags: string[];
 }
 
+export interface PlaylistMetadata {
+    id: string;
+    displayName: string;
+}
+
 export interface User {
     id: string;
     displayName: string;

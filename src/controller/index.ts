@@ -21,12 +21,14 @@ export class Controller {
         ]);
     }
 
-    public async getAllTracksByPlaylists(user: User): Promise<{ playlist: PlaylistMetadata, tracks: Track[] }[]> {
+    public async getPlaylists(user: User): Promise<{ playlist: PlaylistMetadata, tracks: TrackWithTags[] }[]> {
         const playlistsMetadata: PlaylistMetadata[] = await this.musicService.getPlaylistsMetadata(user);
-        return Promise.all(playlistsMetadata.map(async playlist => ({
+        const playlists = await Promise.all(playlistsMetadata.map(async playlist => ({
             playlist,
             tracks: await this.musicService.getPlaylistTracks(user, playlist.id)
-        })))
+        })));
+
+        return this.attachTags(user, playlists);
     }
 
     public async addTagsToTracks(user: User, songIds: string[], tags: string[]): Promise<void> {
@@ -74,5 +76,25 @@ export class Controller {
         return trackIdsToDelete.length > 0
             ? this.dal.deleteTracks(user, this.musicService.type, trackIdsToDelete)
             : Promise.resolve();
+    }
+
+    private async attachTags(user: User, playlists: { playlist: PlaylistMetadata, tracks: Track[] }[]) {
+        const allTracksIds = _.flatMap(playlists, playlist => playlist.tracks.map(track => track.id));
+        const tracksFromDal: TrackWithTags[] = await this.dal.getTracksByIds(user, this.musicService.type, allTracksIds);
+        const tracksByIds = _.keyBy(tracksFromDal, 'id');
+
+        return playlists.reduce((result, playlistData) => {
+            result.push({
+                playlist: playlistData.playlist,
+                tracks: playlistData.tracks.map(track => {
+                    return tracksByIds[track.id]
+                        ? tracksByIds[track.id]
+                        : { ...track, tags: [] }
+                })
+            });
+            return result;
+        }, []);
+
+
     }
 }
