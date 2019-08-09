@@ -31,7 +31,26 @@ export class Controller {
         return this.attachTags(user, playlists);
     }
 
-    public async addTagsToTracks(user: User, songIds: string[], tags: string[]): Promise<void> {
+    public async addTagsToTracks(user: User, tracksIds: string[], tags: string[]): Promise<void> {
+        const tracks: TrackWithTags[] = await this.dal.getTracksByIds(user, this.musicService.type, tracksIds);
+        const tracksByIds = _.keyBy(tracks, 'id');
+
+        const tracksToUpdate = tracksIds.reduce((result, trackId) => {
+            const track = tracksByIds[trackId];
+            const tagsToAdd = _.difference(tags, track.tags);
+            if (tagsToAdd.length > 0) {
+                result.push({
+                    ...track,
+                    tags: [...track.tags, ...tagsToAdd]
+                });
+            }
+
+            return result;
+        }, []);
+
+        if (tracksToUpdate.length > 0) {
+            return this.dal.upsertTracks(user, this.musicService.type, tracksToUpdate);
+        }
     }
 
     public async removeTagsFromTracks(user: User, songIds: string[], tags: string[]): Promise<void> {
@@ -63,7 +82,7 @@ export class Controller {
             tags: []
         }));
         return formattedTracksToAdd.length > 0
-            ? this.dal.addTracks(user, this.musicService.type, formattedTracksToAdd)
+            ? this.dal.upsertTracks(user, this.musicService.type, formattedTracksToAdd)
             : Promise.resolve();
     }
 
