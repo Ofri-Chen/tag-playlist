@@ -19,8 +19,8 @@ export class SpotifyMusicService implements MusicService {
         const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
         const playlistsResponse = await spotifyApi.getUserPlaylists();
 
-        const playlists = await Promise.all(playlistsResponse.body.items.map(playlistRes => this.getPlaylistTracks(user, playlistRes.id)));
-        return _(playlists)
+        const playlistsTracks = await Promise.all(playlistsResponse.body.items.map(playlistRes => this.getPlaylistTracks(user, playlistRes.id)));
+        return _(playlistsTracks)
             .flatten()
             .uniqBy('id')
             .value();
