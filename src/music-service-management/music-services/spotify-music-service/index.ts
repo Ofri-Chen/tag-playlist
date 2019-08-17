@@ -7,12 +7,12 @@ import _ from 'lodash';
 import { ExtendedError } from "../../../common/error";
 import { runAsAsyncChunks } from '../../../../external-libs/async-chunker/index.js';
 
-const spotifyConfig: SpotifyConfiguration = resolveAllStringParametersInObject(config.musicServices.spotify);
+// const spotifyConfig: SpotifyConfiguration = resolveAllStringParametersInObject(config.musicServices.spotify);
 
 export class SpotifyMusicService implements MusicService {
     public type: MusicServiceTypes = 'spotify';
 
-    constructor(private cacheService: ICacheService<string, SpotifyWebApi>) {
+    constructor(private spotifyConfig: SpotifyConfiguration, private cacheService: ICacheService<string, SpotifyWebApi>) {
     }
 
     public async getAllSongs(user: User): Promise<Track[]> {
@@ -39,13 +39,16 @@ export class SpotifyMusicService implements MusicService {
         const spotifyApi: SpotifyWebApi = this.getSpotifyApi(user);
         const tracksResponse = await spotifyApi.getPlaylistTracks(playlistId);
 
-        return tracksResponse.body.items.map(trackRes => ({
-            id: trackRes.track.id,
-            type: this.type,
-            displayName: trackRes.track.name,
-            artists: trackRes.track.artists.map(artist => artist.name),
-            album: trackRes.track.album.name
-        }))
+        return tracksResponse.body.items.map(trackRes => {
+            const track = trackRes.track;
+            return {
+                id: track.id,
+                type: this.type,
+                displayName: track.name,
+                artists: track.artists.map(artist => artist.name),
+                album: track.album.name
+            }
+        })
     }
 
     async createPlaylist(user: User, playlistName: string): Promise<string> {
@@ -60,7 +63,7 @@ export class SpotifyMusicService implements MusicService {
 
         return runAsAsyncChunks(trackIds,
             (trackIdsChunk: string[]) => spotifyApi.addTracksToPlaylist(playlistId, trackIdsChunk),
-            spotifyConfig.chunkOptions);
+            this.spotifyConfig.chunkOptions);
     }
 
     private getSpotifyApi(user: User): SpotifyWebApi {
@@ -84,7 +87,7 @@ export class SpotifyMusicService implements MusicService {
         const spotifyApi = new SpotifyWebApi({
             clientId: spotifyUserConfig.clientId,
             clientSecret: spotifyUserConfig.clientSecret,
-            redirectUri: spotifyUserConfig.serverUri,
+            redirectUri: this.spotifyConfig.serverUri,
         });
         spotifyApi.setAccessToken(spotifyUserConfig.accessToken);
 
