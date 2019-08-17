@@ -13,7 +13,7 @@ export class Controller {
             this.dal.getUserTracks(user, this.musicService.type)
         ]);
 
-        Promise.all([
+        return Promise.all([
             this.addRelevantTracksToDal(user, musicServiceTracks, dalTracks),
             this.deleteRelevantTracksFromDal(user, musicServiceTracks, dalTracks)
         ]);
