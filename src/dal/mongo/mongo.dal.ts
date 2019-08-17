@@ -14,7 +14,6 @@ export class MongoDal implements Dal {
     }
 
     upsertTracks(user: User, type: MusicServiceTypes, tracks: TrackWithTags[]): Promise<void> {]
-        const updates = 
         this._tracksCollection.bulkWrite()
         throw new Error("Method not implemented.");
     }

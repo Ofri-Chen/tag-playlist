@@ -118,16 +118,13 @@ export class Controller {
         const tracksFromDal: TrackWithTags[] = await this.dal.getTracksByIds(user, this.musicService.type, allTracksIds);
         const tracksByIds = _.keyBy(tracksFromDal, 'id');
 
-        return playlists.reduce((result, playlistData) => {
-            result.push({
-                playlist: playlistData.playlist,
-                tracks: playlistData.tracks.map(track => {
-                    return tracksByIds[track.id]
-                        ? tracksByIds[track.id]
-                        : { ...track, tags: [] }
-                })
-            });
-            return result;
-        }, []);
+        return playlists.map(playlistData => ({
+            playlist: playlistData.playlist,
+            tracks: playlistData.tracks.map(track => {
+                return tracksByIds[track.id]
+                    ? tracksByIds[track.id]
+                    : { ...track, tags: [] }
+            })
+        }));        
     }
 }
