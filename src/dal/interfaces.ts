@@ -14,6 +14,6 @@ export interface Dal {
 export interface DalTrack {
     userId: string;
     trackId: string;
-    type: MusicServiceTypes;    
+    type: MusicServiceTypes;
     tags: string[];
 }

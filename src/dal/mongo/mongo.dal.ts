@@ -30,7 +30,10 @@ export class MongoDal implements Dal {
             trackId: track.trackId,
             type: track.type
         }
-        await this._tracksCollection.updateOne(filter, track, { upsert: true });
+        await this._tracksCollection.updateOne(
+            filter,
+            { $set: { ...track } },
+            { upsert: true });
     }
     deleteTracks(user: User, type: MusicServiceTypes, trackIds: string[]): Promise<void> {
         throw new Error("Method not implemented.");
@@ -63,7 +66,7 @@ export class MongoDal implements Dal {
         ).toArray();
     }
 
-    private connectToDb(initializePromiseActions: {resolve: any, reject: any}) {
+    private connectToDb(initializePromiseActions: { resolve: any, reject: any }) {
         this._mongoClient = new MongoClient(this._mongoConfig.uri);
         this._mongoClient.connect()
             .then(() => {
