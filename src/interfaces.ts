@@ -55,14 +55,14 @@ export interface MongoConfig {
 }
 
 export interface SpotifyConfiguration {
+    serverUri: string;
+    generateAccessTokenUri: string;
     accessTokenExpiration: number;
     chunkOptions: any;
     serverPort: number;
 }
 
 export interface SpotifyUserConfiguration {
-    generateAccessTokenUri: string;
-    serverUri: string;
     clientId: string;
     clientSecret: string;
     accessToken: string;
