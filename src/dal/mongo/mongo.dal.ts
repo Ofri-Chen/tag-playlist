@@ -1,38 +1,49 @@
 import { Dal } from "../interfaces";
 import { User, MusicServiceTypes, TrackWithTags, MongoConfig, ILogger } from "../../interfaces";
-import { MongoClient, Db, Collection } from 'mongodb';
+import { MongoClient, Db, Collection, UpdateWriteOpResult } from 'mongodb';
 import * as config from '../../../config';
 import { ExtendedError } from "../../common/error";
-import { MongoTrack } from "./interfaces";
+import { DalTrack } from "./interfaces";
 import { EmptyLogger } from "../../common/empty-logger";
 
 export class MongoDal implements Dal {
-    private _tracksCollection: Collection<MongoTrack>;
+    private _tracksCollection: Collection<DalTrack>;
     private _mongoClient: MongoClient;
 
-    constructor(private _mongoConfig: MongoConfig, private _logger: ILogger = new EmptyLogger()) {        
+    constructor(private _mongoConfig: MongoConfig, private _logger: ILogger = new EmptyLogger()) {
         this.connectToDb();
     }
 
-    upsertTracks(user: User, type: MusicServiceTypes, tracks: TrackWithTags[]): Promise<void> {
-        // const updates = 
-        // this._tracksCollection.bulkWrite()
-        throw new Error("Method not implemented.");
+    async upsertTracks(user: User, tracks: TrackWithTags[]): Promise<void> {
+        const filter = {
+            userId: user.id,
+            trackId: tracks[0].id,
+            type: tracks[0].type
+        }
+
+        const updatedDoc: DalTrack = {
+            userId: user.id,
+            trackId: tracks[0].id,
+            type: tracks[0].type,
+            tags: tracks[0].tags
+        }
+
+        await this._tracksCollection.updateOne(filter, updatedDoc, { upsert: true });
     }
     deleteTracks(user: User, type: MusicServiceTypes, trackIds: string[]): Promise<void> {
         throw new Error("Method not implemented.");
     }
 
-    getTracksByIds(user: User, type: MusicServiceTypes, ids: string[]): Promise<TrackWithTags[]> {
+    getTracksByIds(user: User, type: MusicServiceTypes, ids: string[]): Promise<DalTrack[]> {
         return this._tracksCollection.find(
             {
                 userId: user.id,
                 type,
-                id: { $in: ids }
+                trackId: { $in: ids }
             }
         ).toArray();
     }
-    getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<TrackWithTags[]> {
+    getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<DalTrack[]> {
         return this._tracksCollection.find(
             {
                 userId: user.id,
@@ -41,7 +52,7 @@ export class MongoDal implements Dal {
             }
         ).toArray();
     }
-    getUserTracks(user: User, type: MusicServiceTypes): Promise<TrackWithTags[]> {
+    getUserTracks(user: User, type: MusicServiceTypes): Promise<DalTrack[]> {
         return this._tracksCollection.find(
             {
                 userId: user.id,

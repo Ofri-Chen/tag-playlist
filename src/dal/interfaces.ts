@@ -1,10 +1,17 @@
 import { User, TrackWithTags, MusicServiceTypes } from "../interfaces";
 
 export interface Dal {
-    upsertTracks(user: User, type: MusicServiceTypes, tracks: TrackWithTags[]): Promise<void>;
+    upsertTracks(tracks: DalTrack[]): Promise<void>;
     deleteTracks(user: User, type: MusicServiceTypes, trackIds: string[]): Promise<void>;
 
-    getTracksByIds(user: User, type: MusicServiceTypes, ids: string[]): Promise<TrackWithTags[]>;
-    getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<TrackWithTags[]>;
-    getUserTracks(user: User, type: MusicServiceTypes): Promise<TrackWithTags[]>;
+    getTracksByIds(user: User, type: MusicServiceTypes, ids: string[]): Promise<DalTrack[]>;
+    getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<DalTrack[]>;
+    getUserTracks(user: User, type: MusicServiceTypes): Promise<DalTrack[]>;
+}
+
+export interface DalTrack {
+    userId: string;
+    trackId: string;
+    type: MusicServiceTypes;    
+    tags: string[];
 }

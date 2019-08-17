@@ -1,4 +1,4 @@
-import { Dal } from "../dal/interfaces";
+import { Dal, DalTrack } from "../dal/interfaces";
 import { MusicService } from "../music-service-management/interfaces";
 import { TrackWithTags, User, Track, PlaylistMetadata } from "../interfaces";
 import _ from "lodash";
@@ -8,7 +8,7 @@ export class Controller {
     }
 
     public async syncTracks(user: User) {
-        const [musicServiceTracks, dalTracks]: [Track[], TrackWithTags[]] = await Promise.all([
+        const [musicServiceTracks, dalTracks]: [Track[], DalTrack[]] = await Promise.all([
             this.musicService.getAllSongs(user),
             this.dal.getUserTracks(user, this.musicService.type)
         ]);
@@ -30,7 +30,7 @@ export class Controller {
     }
 
     public async addTagsToTracks(user: User, tracksIds: string[], tags: string[]): Promise<void> {
-        const tracks: TrackWithTags[] = await this.dal.getTracksByIds(user, this.musicService.type, tracksIds);
+        const tracks: DalTrack[] = await this.dal.getTracksByIds(user, this.musicService.type, tracksIds);
         const tracksByIds = _.keyBy(tracks, 'id');
 
         const tracksToUpdate = tracksIds.reduce((result, trackId) => {
@@ -38,7 +38,9 @@ export class Controller {
             const tagsToAdd = _.difference(tags, track.tags);
             if (tagsToAdd.length > 0) {
                 result.push({
-                    ...track,
+                    userId: user.id,
+                    trackId: track.trackId,
+                    type: this.musicService.type,
                     tags: [...track.tags, ...tagsToAdd]
                 });
             }
@@ -47,12 +49,12 @@ export class Controller {
         }, []);
 
         if (tracksToUpdate.length > 0) {
-            return this.dal.upsertTracks(user, this.musicService.type, tracksToUpdate);
+            return this.dal.upsertTracks(tracksToUpdate);
         }
     }
 
     public async removeTagsFromTracks(user: User, tracksIds: string[], tags: string[]): Promise<void> {
-        const tracks: TrackWithTags[] = await this.dal.getTracksByIds(user, this.musicService.type, tracksIds);
+        const tracks: DalTrack[] = await this.dal.getTracksByIds(user, this.musicService.type, tracksIds);
         const tracksByIds = _.keyBy(tracks, 'id');
 
         const tracksToUpdate = tracksIds.reduce((result, trackId) => {
@@ -60,7 +62,9 @@ export class Controller {
             const reducedTags = _.difference(track.tags, tags);
             if (reducedTags.length < track.tags.length) {
                 result.push({
-                    ...track,
+                    userId: user.id,
+                    trackId: track.trackId,
+                    type: this.musicService.type,
                     tags: reducedTags
                 });
             }
@@ -69,7 +73,7 @@ export class Controller {
         }, []);
 
         if (tracksToUpdate.length > 0) {
-            return this.dal.upsertTracks(user, this.musicService.type, tracksToUpdate);
+            return this.dal.upsertTracks(tracksToUpdate);
         }
     }
 
@@ -81,7 +85,7 @@ export class Controller {
     }
 
     public async updatePlaylistByTags(user: User, playlistId: string, tags: string[]): Promise<void> {
-        const tracksByTags: TrackWithTags[] = (await this.dal.getTracksByTags(user, this.musicService.type, tags));
+        const tracksByTags: DalTrack[] = (await this.dal.getTracksByTags(user, this.musicService.type, tags));
         const playlistTracks: Track[] = (await this.musicService.getPlaylistTracks(user, playlistId));
         const trackIdsToAdd: string[] = _(tracksByTags)
             .differenceBy(playlistTracks, 'id')
@@ -91,18 +95,20 @@ export class Controller {
         return this.musicService.updatePlaylistTracks(user, playlistId, trackIdsToAdd);
     }
 
-    private addRelevantTracksToDal(user: User, musicServiceTracks: Track[], dalTracks: TrackWithTags[]) {
+    private addRelevantTracksToDal(user: User, musicServiceTracks: Track[], dalTracks: DalTrack[]) {
         const tracksToAdd: Track[] = _.differenceBy(musicServiceTracks, dalTracks, 'id');
-        const formattedTracksToAdd: TrackWithTags[] = tracksToAdd.map(track => ({
-            ...track,
+        const formattedTracksToAdd: DalTrack[] = tracksToAdd.map(track => ({
+            userId: user.id,
+            trackId: track.id,
+            type: this.musicService.type,
             tags: []
         }));
         return formattedTracksToAdd.length > 0
-            ? this.dal.upsertTracks(user, this.musicService.type, formattedTracksToAdd)
+            ? this.dal.upsertTracks(formattedTracksToAdd)
             : Promise.resolve();
     }
 
-    private deleteRelevantTracksFromDal(user: User, musicServiceTracks: Track[], dalTracks: TrackWithTags[]) {
+    private deleteRelevantTracksFromDal(user: User, musicServiceTracks: Track[], dalTracks: DalTrack[]) {
         const trackIdsToDelete: string[] = _(dalTracks)
             .differenceBy(musicServiceTracks, 'id')
             .map('id')
@@ -115,16 +121,17 @@ export class Controller {
 
     private async attachTags(user: User, playlists: { playlist: PlaylistMetadata, tracks: Track[] }[]) {
         const allTracksIds = _.flatMap(playlists, playlist => playlist.tracks.map(track => track.id));
-        const tracksFromDal: TrackWithTags[] = await this.dal.getTracksByIds(user, this.musicService.type, allTracksIds);
+        const tracksFromDal: DalTrack[] = await this.dal.getTracksByIds(user, this.musicService.type, allTracksIds);
         const tracksByIds = _.keyBy(tracksFromDal, 'id');
 
         return playlists.map(playlistData => ({
             playlist: playlistData.playlist,
             tracks: playlistData.tracks.map(track => {
-                return tracksByIds[track.id]
-                    ? tracksByIds[track.id]
-                    : { ...track, tags: [] }
+                return {
+                    ...track,
+                    tags: _.get(tracksByIds, [track.id, 'tags'], [])
+                }
             })
-        }));        
+        }));
     }
 }
