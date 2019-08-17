@@ -4,17 +4,19 @@ import { MongoClient, Db, Collection } from 'mongodb';
 import * as config from '../../../config';
 import { ExtendedError } from "../../common/error";
 import { MongoTrack } from "./interfaces";
+import { EmptyLogger } from "../../common/empty-logger";
 
 export class MongoDal implements Dal {
     private _tracksCollection: Collection<MongoTrack>;
     private _mongoClient: MongoClient;
 
-    constructor(private _mongoConfig: MongoConfig, private _logger: ILogger) {
+    constructor(private _mongoConfig: MongoConfig, private _logger: ILogger = new EmptyLogger()) {        
         this.connectToDb();
     }
 
-    upsertTracks(user: User, type: MusicServiceTypes, tracks: TrackWithTags[]): Promise<void> {]
-        this._tracksCollection.bulkWrite()
+    upsertTracks(user: User, type: MusicServiceTypes, tracks: TrackWithTags[]): Promise<void> {
+        // const updates = 
+        // this._tracksCollection.bulkWrite()
         throw new Error("Method not implemented.");
     }
     deleteTracks(user: User, type: MusicServiceTypes, trackIds: string[]): Promise<void> {
