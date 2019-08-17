@@ -4,11 +4,11 @@ export interface Dal {
     initialized: Promise<void>;
 
     upsertTracks(tracks: DalTrack[]): Promise<void>;
-    deleteTracks(user: User, type: MusicServiceTypes, trackIds: string[]): Promise<void>;
+    deleteTracks(userId: string, type: MusicServiceTypes, trackIds: string[]): Promise<void>;
 
-    getTracksByIds(user: User, type: MusicServiceTypes, ids: string[]): Promise<DalTrack[]>;
-    getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<DalTrack[]>;
-    getUserTracks(user: User, type: MusicServiceTypes): Promise<DalTrack[]>;
+    getTracksByIds(userId: string, type: MusicServiceTypes, ids: string[]): Promise<DalTrack[]>;
+    getTracksByTags(userId: string, type: MusicServiceTypes, tags: string[]): Promise<DalTrack[]>;
+    getUserTracks(userId: string, type: MusicServiceTypes): Promise<DalTrack[]>;
 }
 
 export interface DalTrack {
@@ -16,4 +16,6 @@ export interface DalTrack {
     trackId: string;
     type: MusicServiceTypes;
     tags: string[];
+
+    isDeleted?: boolean;
 }

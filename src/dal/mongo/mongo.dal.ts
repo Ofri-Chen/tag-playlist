@@ -1,10 +1,8 @@
 import { Dal, DalTrack } from "../interfaces";
-import { User, MusicServiceTypes, TrackWithTags, MongoConfig, ILogger } from "../../interfaces";
-import { MongoClient, Db, Collection, UpdateWriteOpResult } from 'mongodb';
-import * as config from '../../../config';
+import { MusicServiceTypes, TrackWithTags, MongoConfig, ILogger } from "../../interfaces";
+import { MongoClient, Collection } from 'mongodb';
 import { ExtendedError } from "../../common/error";
 import { EmptyLogger } from "../../common/empty-logger";
-import { rejects } from "assert";
 
 export class MongoDal implements Dal {
     private _tracksCollection: Collection<DalTrack>;
@@ -24,43 +22,39 @@ export class MongoDal implements Dal {
     }
 
     async upsertTracks(tracks: DalTrack[]): Promise<void> {
-        const track = this.extractRelevantFields(tracks[0]);
-        const filter = {
-            userId: track.userId,
-            trackId: track.trackId,
-            type: track.type
-        }
-        await this._tracksCollection.updateOne(
-            filter,
-            { $set: { ...track } },
-            { upsert: true });
-    }
-    deleteTracks(user: User, type: MusicServiceTypes, trackIds: string[]): Promise<void> {
-        throw new Error("Method not implemented.");
+        const tracksToUpsert = tracks.map(track => this.extractRelevantFields(track, false));
+        return this.updateTracks(tracksToUpsert, true);
     }
 
-    getTracksByIds(user: User, type: MusicServiceTypes, ids: string[]): Promise<DalTrack[]> {
+    async deleteTracks(userId: string, type: MusicServiceTypes, trackIds: string[]): Promise<void> {
+        const tracks = await this.getTracksByIds(userId, type, trackIds);
+        tracks.forEach(track => track.isDeleted = true);
+
+        return this.updateTracks(tracks);
+    }
+
+    getTracksByIds(userId: string, type: MusicServiceTypes, ids: string[]): Promise<DalTrack[]> {
         return this._tracksCollection.find(
             {
-                userId: user.id,
+                userId: userId,
                 type,
                 trackId: { $in: ids }
             }
         ).toArray();
     }
-    getTracksByTags(user: User, type: MusicServiceTypes, tags: string[]): Promise<DalTrack[]> {
+    getTracksByTags(userId: string, type: MusicServiceTypes, tags: string[]): Promise<DalTrack[]> {
         return this._tracksCollection.find(
             {
-                userId: user.id,
+                userId: userId,
                 type,
                 tags: { $in: tags }
             }
         ).toArray();
     }
-    getUserTracks(user: User, type: MusicServiceTypes): Promise<DalTrack[]> {
+    getUserTracks(userId: string, type: MusicServiceTypes): Promise<DalTrack[]> {
         return this._tracksCollection.find(
             {
-                userId: user.id,
+                userId: userId,
                 type
             }
         ).toArray();
@@ -79,15 +73,34 @@ export class MongoDal implements Dal {
                 initializePromiseActions.reject();
                 throw new ExtendedError('failed connecting to MongoDB', { uri: this._mongoConfig.uri });
             });
-        this._initializedPromise
     }
 
-    private extractRelevantFields(track: DalTrack): DalTrack {
+    private extractRelevantFields(track: DalTrack, isDeleted?: boolean): DalTrack {
         return {
             userId: track.userId,
             trackId: track.trackId,
             type: track.type,
-            tags: track.tags
+            tags: track.tags,
+            isDeleted: isDeleted || !!track.isDeleted
+        }
+    }
+
+    private async updateTracks(tracks: DalTrack[], upsert: boolean = false) {
+        const operations = tracks.map(track => ({
+            updateMany: {
+                filter: {
+                    userId: track.userId,
+                    trackId: track.trackId,
+                    type: track.type
+                },
+                update: {
+                    $set: { ...track },
+                },
+                upsert
+            }
+        }))
+        if (operations.length > 0) {
+            await this._tracksCollection.bulkWrite(operations);
         }
     }
 }
