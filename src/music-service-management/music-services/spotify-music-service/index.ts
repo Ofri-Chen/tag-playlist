@@ -78,7 +78,7 @@ export class SpotifyMusicService implements MusicService {
 
         const spotifyUserConfig: SpotifyUserConfiguration = resolveAllStringParametersInObject(user.musicServices.spotify);
         const spotifyApi = this.buildSpotifyApiObj(spotifyUserConfig);
-        this.cacheService.setItem(spotifyUserConfig.clientId, spotifyApi, spotifyConfig.accessTokenExpiration);
+        this.cacheService.setItem(spotifyUserConfig.clientId, spotifyApi, this.spotifyConfig.accessTokenExpiration);
 
         return spotifyApi;
     }

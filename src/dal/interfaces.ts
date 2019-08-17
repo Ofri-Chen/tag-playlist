@@ -1,6 +1,8 @@
 import { User, TrackWithTags, MusicServiceTypes } from "../interfaces";
 
 export interface Dal {
+    initialized: Promise<void>;
+
     upsertTracks(tracks: DalTrack[]): Promise<void>;
     deleteTracks(user: User, type: MusicServiceTypes, trackIds: string[]): Promise<void>;
 

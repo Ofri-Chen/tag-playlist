@@ -1,34 +1,36 @@
-import { Dal } from "../interfaces";
+import { Dal, DalTrack } from "../interfaces";
 import { User, MusicServiceTypes, TrackWithTags, MongoConfig, ILogger } from "../../interfaces";
 import { MongoClient, Db, Collection, UpdateWriteOpResult } from 'mongodb';
 import * as config from '../../../config';
 import { ExtendedError } from "../../common/error";
-import { DalTrack } from "./interfaces";
 import { EmptyLogger } from "../../common/empty-logger";
+import { rejects } from "assert";
 
 export class MongoDal implements Dal {
     private _tracksCollection: Collection<DalTrack>;
     private _mongoClient: MongoClient;
+    private _initializedPromise: Promise<void>;
 
     constructor(private _mongoConfig: MongoConfig, private _logger: ILogger = new EmptyLogger()) {
-        this.connectToDb();
+        let initializedPromiseActions;
+        this._initializedPromise = new Promise<void>((resolve, reject) => {
+            initializedPromiseActions = { resolve, reject };
+        });
+        this.connectToDb(initializedPromiseActions);
     }
 
-    async upsertTracks(user: User, tracks: TrackWithTags[]): Promise<void> {
+    get initialized(): Promise<void> {
+        return this._initializedPromise;
+    }
+
+    async upsertTracks(tracks: DalTrack[]): Promise<void> {
+        const track = this.extractRelevantFields(tracks[0]);
         const filter = {
-            userId: user.id,
-            trackId: tracks[0].id,
-            type: tracks[0].type
+            userId: track.userId,
+            trackId: track.trackId,
+            type: track.type
         }
-
-        const updatedDoc: DalTrack = {
-            userId: user.id,
-            trackId: tracks[0].id,
-            type: tracks[0].type,
-            tags: tracks[0].tags
-        }
-
-        await this._tracksCollection.updateOne(filter, updatedDoc, { upsert: true });
+        await this._tracksCollection.updateOne(filter, track, { upsert: true });
     }
     deleteTracks(user: User, type: MusicServiceTypes, trackIds: string[]): Promise<void> {
         throw new Error("Method not implemented.");
@@ -61,16 +63,28 @@ export class MongoDal implements Dal {
         ).toArray();
     }
 
-    private connectToDb() {
+    private connectToDb(initializePromiseActions: {resolve: any, reject: any}) {
         this._mongoClient = new MongoClient(this._mongoConfig.uri);
         this._mongoClient.connect()
             .then(() => {
                 this._logger.info('connected to MongoDB');
                 this._tracksCollection = this._mongoClient.db(this._mongoConfig.dbName).collection(this._mongoConfig.collection);
+                initializePromiseActions.resolve();
             })
             .catch(() => {
                 this._logger.error('failed connecting to MongoDB');
+                initializePromiseActions.reject();
                 throw new ExtendedError('failed connecting to MongoDB', { uri: this._mongoConfig.uri });
             });
+        this._initializedPromise
+    }
+
+    private extractRelevantFields(track: DalTrack): DalTrack {
+        return {
+            userId: track.userId,
+            trackId: track.trackId,
+            type: track.type,
+            tags: track.tags
+        }
     }
 }
